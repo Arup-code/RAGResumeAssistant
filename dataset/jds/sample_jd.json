@@ -1,0 +1,8 @@
+{
+  "job_id": "jd_sample_backend_001",
+  "title": "Python Backend Engineer",
+  "text": "Looking for a backend engineer with Python, FastAPI, SQL, and cloud deployment experience.",
+  "required_skills": ["python", "fastapi", "sql"],
+  "min_experience_years": 2
+}
+

@@ -1,0 +1,62 @@
+from __future__ import annotations
+
+import os
+import time
+
+import httpx
+
+from utils.exceptions import EmbeddingException, ValidationException
+
+
+class EmbeddingService:
+    def __init__(
+        self,
+        api_key: str | None = None,
+        model: str = "text-embedding-3-small",
+        max_retries: int = 3,
+        backoff_seconds: float = 1.5,
+    ) -> None:
+        self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
+        self.model = model
+        self.max_retries = max_retries
+        self.backoff_seconds = backoff_seconds
+        if not self.api_key:
+            raise ValidationException("OPENROUTER_API_KEY is required for embedding generation")
+
+    def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        if not texts:
+            return []
+
+        payload = {"model": self.model, "input": texts}
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+
+        last_error: Exception | None = None
+        for attempt in range(1, self.max_retries + 1):
+            try:
+                with httpx.Client(timeout=60.0) as client:
+                    response = client.post(
+                        "https://openrouter.ai/api/v1/embeddings",
+                        headers=headers,
+                        json=payload,
+                    )
+                    if response.status_code in {429, 500, 502, 503, 504}:
+                        raise EmbeddingException(f"transient embedding API error: {response.status_code}")
+                    response.raise_for_status()
+                    data = response.json()["data"]
+                    return [item["embedding"] for item in data]
+            except Exception as exc:  # pragma: no cover - network failure path
+                last_error = exc
+                if attempt < self.max_retries:
+                    time.sleep(self.backoff_seconds * attempt)
+
+        raise EmbeddingException(f"embedding generation failed after retries: {last_error}")
+
+    def embed_text(self, text: str) -> list[float]:
+        vectors = self.embed_texts([text])
+        if not vectors:
+            raise EmbeddingException("empty embedding response")
+        return vectors[0]
+
