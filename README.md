@@ -16,42 +16,45 @@ Production-oriented starter for resume ingestion + job matching with strict Pyda
 - `dataset/resumes/` (flat files: `.pdf`, `.docx`, `.txt`)
 - `dataset/jds/` (flat files: `.json`)
 
-## Install
+## Quick start (clone + venv + install)
 
 ```bash
+git clone https://github.com/Arup-code/RAGResumeAssistant.git
+cd RAGResumeAssistant
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-## Generate 30 resumes + 5 JDs quickly
+## Configure OpenRouter API key (mandatory)
+
+Set `OPENROUTER_API_KEY` before running ingestion or matching.
+
+Option 1: export in your shell
+
+```bash
+export OPENROUTER_API_KEY="your_openrouter_key"
+```
+
+Option 2: add it to a `.env` file in project root
+
+```bash
+cat > .env <<'EOF'
+OPENROUTER_API_KEY=your_openrouter_key
+EOF
+```
+
+If you use the shell export option, verify it is available:
+
+```bash
+python -c "import os; print(bool(os.getenv('OPENROUTER_API_KEY')))"
+```
+
+## Generate local mock dataset (30 resumes + 5 JDs)
 
 ```bash
 python scripts/generate_mock_dataset.py
-```
-
-## Import Kaggle resumes into `dataset/resumes`
-
-```bash
-python scripts/import_kaggle_resumes.py
-```
-
-This downloads `palaksood97/resume-dataset`, then copies `.txt/.pdf/.docx` files and extracts resume text from CSV rows into `dataset/resumes/`.
-
-## Run ingestion
-
-```bash
-python resume_rag.py
-```
-
-## Run matching (first JD in dataset)
-
-```bash
-python job_matcher.py
-```
-
-## Run demo orchestrator
-
-```bash
-python scripts/run_demo.py
 ```
 
 ## Unified CLI (`main.py`)
@@ -87,7 +90,40 @@ Output mode flags are available on each subcommand:
 
 `run` is an alias for `pipeline`.
 
-## Retrieval experimentation notebook (accuracy + latency)
+## Latest benchmark snapshot (strict relevance)
+
+Command used:
+
+```bash
+python scripts/run_retrieval_metrics.py
+```
+
+Configuration:
+- `relevance_mode="all_required"`
+- `k_values=[1,3,5,10]`
+- `latency_repeats=25`
+- Dataset: 30 resumes, 6 JDs
+
+Results:
+
+| K  | HitRate@K | Recall@K |
+|----|-----------|----------|
+| 1  | 1.0000    | 0.0467   |
+| 3  | 1.0000    | 0.1402   |
+| 5  | 1.0000    | 0.2336   |
+| 10 | 1.0000    | 0.4672   |
+
+Latency summary (ms):
+- Average: `1.3996`
+- P50: `1.2323`
+- P95: `1.5626`
+
+## Retrieval experimentation notebook (accuracy + latency analysis)
+
+Notebook files/links:
+- Project notebook path: `notebooks/retrieval_experimentation.ipynb`
+- GitHub view: https://github.com/Arup-code/RAGResumeAssistant/blob/main/notebooks/retrieval_experimentation.ipynb
+- nbviewer view: https://nbviewer.org/github/Arup-code/RAGResumeAssistant/blob/main/notebooks/retrieval_experimentation.ipynb
 
 ```bash
 jupyter notebook notebooks/retrieval_experimentation.ipynb
