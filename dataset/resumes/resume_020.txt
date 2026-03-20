@@ -1,0 +1,10 @@
+Candidate 20
+
+Experience
+5 years building backend services with Python and APIs.
+
+Skills
+pandas, python, fastapi, sql, docker, aws, ml
+
+Education
+B.Tech in Computer Science

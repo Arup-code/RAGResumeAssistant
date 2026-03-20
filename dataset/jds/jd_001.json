@@ -1,0 +1,10 @@
+{
+  "job_id": "jd_001",
+  "title": "Role 1",
+  "text": "Need engineer with fastapi, sql experience",
+  "required_skills": [
+    "fastapi",
+    "sql"
+  ],
+  "min_experience_years": 3
+}

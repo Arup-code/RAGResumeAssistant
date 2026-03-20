@@ -14,6 +14,7 @@ class BaseResponse(BaseModel, Generic[T]):
     success: bool
     data: T | None = None
     error: str | None = None
+    warnings: str | None = None
 
 
 class IngestionData(BaseModel):

@@ -1,23 +1,28 @@
 from __future__ import annotations
 
+import hashlib
+import math
 import os
 import time
+from dotenv import load_dotenv
 
 import httpx
 
 from utils.exceptions import EmbeddingException, ValidationException
-
+load_dotenv()
 
 class EmbeddingService:
     def __init__(
         self,
         api_key: str | None = None,
         model: str = "text-embedding-3-small",
+        local_dimension: int = 1536,
         max_retries: int = 3,
         backoff_seconds: float = 1.5,
     ) -> None:
         self.api_key = api_key or os.getenv("OPENROUTER_API_KEY")
         self.model = model
+        self.local_dimension = local_dimension
         self.max_retries = max_retries
         self.backoff_seconds = backoff_seconds
         if not self.api_key:
@@ -26,6 +31,7 @@ class EmbeddingService:
     def embed_texts(self, texts: list[str]) -> list[list[float]]:
         if not texts:
             return []
+
 
         payload = {"model": self.model, "input": texts}
         headers = {
@@ -53,6 +59,26 @@ class EmbeddingService:
                     time.sleep(self.backoff_seconds * attempt)
 
         raise EmbeddingException(f"embedding generation failed after retries: {last_error}")
+
+    def _embed_texts_local(self, texts: list[str]) -> list[list[float]]:
+        return [self._embed_text_local(text) for text in texts]
+
+    def _embed_text_local(self, text: str) -> list[float]:
+        # Hash-based bag-of-tokens embedding for offline/dev mode.
+        vector = [0.0] * self.local_dimension
+        for raw_token in text.lower().split():
+            token = raw_token.strip(".,;:!?()[]{}\"'")
+            if not token:
+                continue
+            digest = hashlib.blake2b(token.encode("utf-8"), digest_size=16).digest()
+            index = int.from_bytes(digest[:8], "big") % self.local_dimension
+            sign = -1.0 if digest[8] & 1 else 1.0
+            vector[index] += sign
+
+        norm = math.sqrt(sum(value * value for value in vector))
+        if norm == 0.0:
+            return vector
+        return [value / norm for value in vector]
 
     def embed_text(self, text: str) -> list[float]:
         vectors = self.embed_texts([text])

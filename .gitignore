@@ -8,4 +8,4 @@ __pycache__/
 
 # Chroma local persistence
 storage/chroma/
-
+.env

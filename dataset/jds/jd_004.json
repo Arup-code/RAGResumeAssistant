@@ -1,0 +1,10 @@
+{
+  "job_id": "jd_004",
+  "title": "Role 4",
+  "text": "Need engineer with aws, ml experience",
+  "required_skills": [
+    "aws",
+    "ml"
+  ],
+  "min_experience_years": 2
+}

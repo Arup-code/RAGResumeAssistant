@@ -54,6 +54,39 @@ python job_matcher.py
 python scripts/run_demo.py
 ```
 
+## Unified CLI (`main.py`)
+
+Default (interactive) mode:
+
+```bash
+python main.py
+```
+
+The interactive flow uses default ingestion settings and then asks you to provide a JD via:
+- multiline paste (type `END` on its own line to finish), or
+- a local file path (`.json` JobDescription file or plain-text JD file)
+
+For advanced parameters and subcommands:
+
+```bash
+python main.py --help
+```
+
+```bash
+python main.py ingest
+python main.py match --job-file-path dataset/jds/jd_001.json --top-k 10
+python main.py pipeline --job-file-path dataset/jds/jd_001.json --top-k 10
+python main.py run --job-file-path dataset/jds/jd_001.json --json
+```
+
+If `--job-file-path` is omitted, the CLI uses the first JSON file in `dataset/jds`.
+
+Output mode flags are available on each subcommand:
+- `--pretty` (default): indented JSON
+- `--json`: compact JSON
+
+`run` is an alias for `pipeline`.
+
 ## Retrieval experimentation notebook (accuracy + latency)
 
 ```bash
@@ -79,7 +112,7 @@ python -m unittest -v tests/test_retrieval_metrics.py
 
 ## Notes
 
-- `OPENROUTER_API_KEY` must be set for real metadata extraction and embeddings.
+- `OPENROUTER_API_KEY` is mandatory for metadata extraction, JD extraction, and embeddings.
 - Chroma persistence defaults to `storage/chroma` using collection `global_resume_collection`.
 - Parse failures are skipped and reported in ingestion response only.
 

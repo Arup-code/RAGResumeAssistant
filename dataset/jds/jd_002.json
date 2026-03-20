@@ -1,0 +1,10 @@
+{
+  "job_id": "jd_002",
+  "title": "Role 2",
+  "text": "Need engineer with sql, docker experience",
+  "required_skills": [
+    "sql",
+    "docker"
+  ],
+  "min_experience_years": 4
+}

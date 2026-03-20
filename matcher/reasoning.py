@@ -14,6 +14,7 @@ def build_reasoning(candidate: SearchResult, job: JobDescription, final_score: f
 
     return MatchResult(
         source_id=candidate.source_id,
+        candidate_name=candidate.metadata.name or candidate.source_id,
         final_score=final_score,
         matched_skills=matched_skills,
         missing_skills=missing_skills,

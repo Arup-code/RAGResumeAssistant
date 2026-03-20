@@ -20,7 +20,14 @@ class ChromaVectorStore:
             raise RetrievalException("chromadb is required for vector persistence") from exc
 
         Path(persist_directory).mkdir(parents=True, exist_ok=True)
-        client = chromadb.PersistentClient(path=persist_directory)
+        client = chromadb.PersistentClient(
+            path=persist_directory,
+            settings=chromadb.Settings(
+                anonymized_telemetry=False,
+                chroma_product_telemetry_impl="infra.chroma_telemetry.NoOpProductTelemetry",
+                chroma_telemetry_impl="infra.chroma_telemetry.NoOpProductTelemetry",
+            ),
+        )
         self.collection = client.get_or_create_collection(name=collection_name)
 
     def upsert_chunks(

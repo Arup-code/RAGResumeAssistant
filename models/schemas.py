@@ -75,6 +75,7 @@ class JobDescription(BaseModel):
 
 class MatchResult(BaseModel):
     source_id: str
+    candidate_name: str = ""
     final_score: float = Field(ge=0.0, le=100.0)
     matched_skills: list[str] = Field(default_factory=list)
     missing_skills: list[str] = Field(default_factory=list)

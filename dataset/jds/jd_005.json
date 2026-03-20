@@ -1,0 +1,10 @@
+{
+  "job_id": "jd_005",
+  "title": "Role 5",
+  "text": "Need engineer with ml, pandas experience",
+  "required_skills": [
+    "ml",
+    "pandas"
+  ],
+  "min_experience_years": 3
+}

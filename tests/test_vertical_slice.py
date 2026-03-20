@@ -7,6 +7,7 @@ import job_matcher
 import resume_rag
 from models.schemas import Chunk, JobDescription, Metadata, ResumeDocument, SearchResult, SkippedReason
 from utils.exceptions import ParseException
+from utils.exceptions import ValidationException
 
 
 class FakeEmbeddingService:
@@ -33,7 +34,47 @@ class FakeMetadataExtractor:
         return Metadata(name="Test User", skills=["python", "sql"], experience_years=3, education="B.Tech")
 
 
+class InspectableVectorStore:
+    last_metadata: Metadata | None = None
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def upsert_chunks(self, chunks, vectors, metadata):
+        InspectableVectorStore.last_metadata = metadata
+
+
 class VerticalSliceTests(unittest.TestCase):
+    def test_ingestion_infers_candidate_name_when_metadata_extractor_unavailable(self):
+        InspectableVectorStore.last_metadata = None
+        chunk = Chunk(
+            chunk_id="resume_1::chunk::0",
+            source_id="resume_1",
+            text="Python developer",
+            section_type="general",
+        )
+
+        with (
+            patch("resume_rag._list_resume_files", return_value=["resume_1.txt"]),
+            patch(
+                "resume_rag.load_resume",
+                return_value=ResumeDocument(
+                    source_id="resume_1",
+                    file_path="resume_1.txt",
+                    text="Jane Doe\nPython engineer with APIs",
+                ),
+            ),
+            patch("resume_rag.chunk_resume", return_value=[chunk]),
+            patch("resume_rag.ChromaVectorStore", InspectableVectorStore),
+            patch("resume_rag.EmbeddingService", FakeEmbeddingService),
+            patch("resume_rag.MetadataExtractor", side_effect=ValidationException("missing key")),
+        ):
+            response = resume_rag.ingest_resumes()
+
+        self.assertTrue(response.success)
+        self.assertIsNotNone(InspectableVectorStore.last_metadata)
+        self.assertEqual(InspectableVectorStore.last_metadata.name, "Jane Doe")
+
     def test_ingestion_skips_parse_failures_and_tracks_count(self):
         chunk = Chunk(
             chunk_id="ok::chunk::0",
@@ -104,6 +145,42 @@ class VerticalSliceTests(unittest.TestCase):
         self.assertEqual(response.data.job_id, "jd_1")
         self.assertEqual(len(response.data.results), 1)
         self.assertEqual(response.data.results[0].source_id, "cand_a")
+        self.assertEqual(response.data.results[0].candidate_name, "A")
+
+    def test_job_matcher_falls_back_to_semantic_results_with_warning(self):
+        fake_job = JobDescription(
+            job_id="jd_2",
+            title="Platform",
+            text="Need kubernetes",
+            required_skills=["kubernetes"],
+            min_experience_years=5,
+        )
+
+        candidates = [
+            SearchResult(
+                source_id="cand_sparse",
+                chunk_id="cand_sparse::chunk::1",
+                score=0.88,
+                chunk_text="Worked on cloud platforms and deployments",
+                section_type="experience",
+                metadata=Metadata(name="Sparse", skills=[], experience_years=0, education=""),
+            )
+        ]
+
+        with (
+            patch("job_matcher._load_job_description", return_value=fake_job),
+            patch("job_matcher.EmbeddingService", FakeEmbeddingService),
+            patch("job_matcher.ChromaVectorStore", FakeVectorStore),
+            patch("job_matcher.retrieve_candidates", return_value=candidates),
+        ):
+            response = job_matcher.match_job("dataset/jds/sample_jd.json", top_k=5)
+
+        self.assertTrue(response.success)
+        self.assertIsNotNone(response.data)
+        self.assertEqual(len(response.data.results), 1)
+        self.assertEqual(response.data.results[0].candidate_name, "Sparse")
+        self.assertIsNotNone(response.warnings)
+        self.assertIn("semantic-only", response.warnings.lower())
 
 
 if __name__ == "__main__":
